@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Readest",
-  "mainBinaryName": "readest",
-  "identifier": "com.bilingify.readest",
+  "productName": "OneRead",
+  "mainBinaryName": "oneread",
+  "identifier": "com.oneread.app",
   "version": "../package.json",
   "build": {
     "frontendDist": "../out",

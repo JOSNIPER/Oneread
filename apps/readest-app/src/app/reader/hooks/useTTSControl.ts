@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useEnv } from '@/context/EnvContext';
-import { useAuth } from '@/context/AuthContext';
 import { useThemeStore } from '@/store/themeStore';
 import { useBookDataStore } from '@/store/bookDataStore';
 import { useReaderStore } from '@/store/readerStore';
@@ -29,7 +28,6 @@ interface UseTTSControlProps {
 export const useTTSControl = ({ bookKey, onRequestHidePanel }: UseTTSControlProps) => {
   const _ = useTranslation();
   const { appService } = useEnv();
-  const { user } = useAuth();
   const { isDarkMode } = useThemeStore();
   const getBookData = useBookDataStore((s) => s.getBookData);
   const getView = useReaderStore((s) => s.getView);
@@ -166,14 +164,6 @@ export const useTTSControl = ({ bookKey, onRequestHidePanel }: UseTTSControlProp
     const bookData = getBookData(bookKey);
     if (!bookData || !bookData.book) return;
     const { title, author, coverImageUrl } = bookData.book;
-
-    const handleNeedAuth = () => {
-      eventDispatcher.dispatch('toast', {
-        message: _('Please log in to use advanced TTS features'),
-        type: 'error',
-        timeout: 5000,
-      });
-    };
 
     const handleSpeakMark = (e: Event) => {
       const progress = getProgress(bookKey);
@@ -333,13 +323,11 @@ export const useTTSControl = ({ bookKey, onRequestHidePanel }: UseTTSControlProp
       });
     };
 
-    ttsController.addEventListener('tts-need-auth', handleNeedAuth);
     ttsController.addEventListener('tts-speak-mark', handleSpeakMark);
     ttsController.addEventListener('tts-highlight-mark', handleHighlightMark);
     ttsController.addEventListener('tts-highlight-word', handleHighlightWord);
     ttsController.addEventListener('tts-position', handlePosition);
     return () => {
-      ttsController.removeEventListener('tts-need-auth', handleNeedAuth);
       ttsController.removeEventListener('tts-speak-mark', handleSpeakMark);
       ttsController.removeEventListener('tts-highlight-mark', handleHighlightMark);
       ttsController.removeEventListener('tts-highlight-word', handleHighlightWord);
@@ -605,7 +593,7 @@ export const useTTSControl = ({ bookKey, onRequestHidePanel }: UseTTSControlProp
         const ttsController = new TTSController(
           appService,
           view,
-          !!user?.id,
+          false,
           preprocessSSMLForTTS,
           handleSectionChange,
         );

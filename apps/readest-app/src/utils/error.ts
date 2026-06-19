@@ -8,7 +8,7 @@ export const handleGlobalError = (e: Error) => {
       sessionStorage.setItem('lastErrorReload', String(now));
       window.location.reload();
     } else {
-      console.warn('Error detected, but reload suppressed (rate limit)');
+      console.warn('Error detected, but reload suppressed (rate limit):', e?.message, e?.stack);
     }
   }
 };

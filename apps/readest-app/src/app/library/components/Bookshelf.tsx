@@ -56,7 +56,6 @@ import ModalPortal from '@/components/ModalPortal';
 import BookshelfItem, { generateBookshelfItems } from './BookshelfItem';
 import SelectModeActions from './SelectModeActions';
 import ShareBookDialog from './ShareBookDialog';
-import { useAuth } from '@/context/AuthContext';
 import GroupingModal from './GroupingModal';
 import SetStatusAlert from './SetStatusAlert';
 
@@ -563,6 +562,14 @@ const Bookshelf: React.FC<BookshelfProps> = ({
     [envConfig, updateBooks],
   );
 
+  const handleToggleFavorite = useCallback(
+    async (book: Book) => {
+      const updatedBook = { ...book, favorite: !book.favorite, updatedAt: Date.now() };
+      await updateBooks(envConfig, [updatedBook]);
+    },
+    [envConfig, updateBooks],
+  );
+
   const handleDeleteBooksIntent = (event: CustomEvent) => {
     const { ids } = event.detail;
     setBookIdsToDelete(ids);
@@ -587,37 +594,53 @@ const Bookshelf: React.FC<BookshelfProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSelectMode, isSelectAll, isSelectNone, currentBookshelfItems]);
 
+  const handleRestoreBooksIntent = useCallback(
+    async (event: CustomEvent) => {
+      const { ids } = event.detail as { ids: string[] };
+      const wanted = new Set(ids);
+      const booksToRestore = libraryBooks.filter(
+        (book) => wanted.has(book.hash) && !!book.deletedAt,
+      );
+      const restoredBooks = booksToRestore.map((book) => ({
+        ...book,
+        deletedAt: null,
+        updatedAt: Date.now(),
+      }));
+      if (restoredBooks.length > 0) {
+        await updateBooks(envConfig, restoredBooks);
+        eventDispatcher.dispatch('toast', {
+          type: 'info',
+          timeout: 2000,
+          message: `已恢复 ${restoredBooks.length} 本书`,
+        });
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [libraryBooks, envConfig, updateBooks],
+  );
+
   useEffect(() => {
     eventDispatcher.on('delete-books', handleDeleteBooksIntent);
+    eventDispatcher.on('restore-books', handleRestoreBooksIntent);
     return () => {
       eventDispatcher.off('delete-books', handleDeleteBooksIntent);
+      eventDispatcher.off('restore-books', handleRestoreBooksIntent);
     };
-  }, []);
+  }, [handleRestoreBooksIntent]);
 
-  const { user } = useAuth();
   const [shareDialogBook, setShareDialogBook] = useState<Book | null>(null);
 
   useEffect(() => {
     const handleShareIntent = (event: CustomEvent) => {
       const book = (event.detail as { book?: Book } | undefined)?.book;
       if (!book) return;
-      if (!user) {
-        // Logged-out users can't share their own files; route through the
-        // login flow instead. The /auth route preserves a return path.
-        eventDispatcher.dispatch('toast', {
-          type: 'info',
-          message: _('Sign in to share books'),
-          timeout: 2500,
-        });
-        return;
-      }
       setShareDialogBook(book);
     };
     eventDispatcher.on('show-share-dialog', handleShareIntent);
     return () => {
       eventDispatcher.off('show-share-dialog', handleShareIntent);
     };
-  }, [user, _]);
+  }, [_]);
 
   // OverlayScrollbars + Virtuoso integration: Virtuoso manages its own
   // scroller; OverlayScrollbars wraps it for overlay scrollbar rendering.
@@ -718,6 +741,7 @@ const Bookshelf: React.FC<BookshelfProps> = ({
           handleShowDetailsBook={handleShowDetailsBook}
           handleLibraryNavigation={handleLibraryNavigation}
           handleUpdateReadingStatus={handleUpdateReadingStatus}
+          handleToggleFavorite={handleToggleFavorite}
           transferProgress={
             'hash' in item ? booksTransferProgress[(item as Book).hash] || null : null
           }
@@ -743,6 +767,7 @@ const Bookshelf: React.FC<BookshelfProps> = ({
       handleShowDetailsBook,
       handleLibraryNavigation,
       handleUpdateReadingStatus,
+      handleToggleFavorite,
     ],
   );
 

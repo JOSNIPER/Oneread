@@ -527,7 +527,9 @@ export default function BrowserPage() {
             skipSslVerification: true,
             onProgress,
           });
-          const probedFilename = await probeFilename(responseHeaders);
+          const probedFilename = await probeFilename(
+            responseHeaders as unknown as Record<string, string>,
+          );
           if (probedFilename) {
             const newFilePath = await appService?.resolveFilePath(probedFilename, 'Cache');
             await appService?.copyFile(dstFilePath, 'None', newFilePath, 'None');

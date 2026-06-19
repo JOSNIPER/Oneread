@@ -1,38 +1,54 @@
-import { createClient } from '@supabase/supabase-js';
-import { getRuntimeConfig } from '@/services/runtimeConfig';
+// Stub: Supabase removed
 
-const supabaseUrl =
-  getRuntimeConfig()?.supabaseUrl ||
-  process.env['SUPABASE_URL'] ||
-  process.env['NEXT_PUBLIC_SUPABASE_URL'] ||
-  atob(process.env['NEXT_PUBLIC_DEFAULT_SUPABASE_URL_BASE64']!);
-const supabaseAnonKey =
-  getRuntimeConfig()?.supabaseAnonKey ||
-  process.env['SUPABASE_ANON_KEY'] ||
-  process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] ||
-  atob(process.env['NEXT_PUBLIC_DEFAULT_SUPABASE_KEY_BASE64']!);
+// Minimal chainable mock so server-side code (e.g. shareServer.ts) compiles.
+// Every query returns empty data with no error; nothing executes at runtime.
+const chain: Record<string, unknown> = {};
+const chainFn = () => chain;
+const queryResult = { data: null, error: null };
+[
+  'select',
+  'insert',
+  'update',
+  'upsert',
+  'delete',
+  'eq',
+  'neq',
+  'gt',
+  'gte',
+  'lt',
+  'lte',
+  'like',
+  'ilike',
+  'is',
+  'in',
+  'contains',
+  'containedBy',
+  'range',
+  'order',
+  'limit',
+  'single',
+  'maybeSingle',
+  'abortSignal',
+  'throwOnError',
+  'filter',
+  'not',
+  'or',
+  'match',
+  'textSearch',
+  'rpc',
+].forEach((m) => {
+  chain[m] = chainFn;
+});
+// make the chain thenable so `await supabase.from(...).select(...)` resolves
+(chain as Record<string, unknown>)['then'] = (resolve: (v: typeof queryResult) => void) =>
+  resolve(queryResult);
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-export const createSupabaseClient = (accessToken?: string) => {
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: accessToken
-        ? {
-            Authorization: `Bearer ${accessToken}`,
-          }
-        : {},
-    },
-  });
+const mockClient = {
+  from: () => chain as never,
+  auth: { getUser: async () => ({ data: { user: null }, error: null }) },
+  rpc: async () => ({ data: null, error: null }),
 };
 
-export const createSupabaseAdminClient = () => {
-  const supabaseAdminKey = process.env['SUPABASE_ADMIN_KEY'] || '';
-  return createClient(supabaseUrl, supabaseAdminKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
-};
+export const supabase = null;
+export const createSupabaseClient = () => mockClient as never;
+export const createSupabaseAdminClient = () => mockClient as never;

@@ -112,6 +112,7 @@ export interface Book {
   lastUpdated?: number; // deprecated in favor of updatedAt
   progress?: [number, number]; // Add progress field: [current, total], 1-based page number
   readingStatus?: ReadingStatus;
+  favorite?: boolean;
   primaryLanguage?: string;
 
   metadata?: BookMetadata;

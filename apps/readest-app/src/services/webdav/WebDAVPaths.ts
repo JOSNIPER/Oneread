@@ -22,7 +22,7 @@ import { makeSafeFilename } from '@/utils/misc';
  * inside the directory keeps the WebDAV client experience readable.
  */
 
-export const WEBDAV_BASE_DIR = 'Readest';
+export const WEBDAV_BASE_DIR = 'OneRead';
 export const WEBDAV_BOOKS_DIR = 'books';
 export const WEBDAV_LIBRARY_FILE = 'library.json';
 export const WEBDAV_BOOK_CONFIG_FILE = 'config.json';

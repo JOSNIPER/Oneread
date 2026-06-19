@@ -1,6 +1,5 @@
 'use client';
 
-import posthog from 'posthog-js';
 import { useEffect, useState } from 'react';
 import { useEnv } from '@/context/EnvContext';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -16,15 +15,26 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
   const _ = useTranslation();
   const { appService } = useEnv();
   const [browserInfo, setBrowserInfo] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     setBrowserInfo(parseWebViewInfo(appService));
   }, [appService]);
 
   useEffect(() => {
-    posthog.captureException(error);
     handleGlobalError(error);
   }, [appService, error]);
+
+  // Auto-retry once on first error (common on fresh install)
+  useEffect(() => {
+    if (retryCount === 0) {
+      const timer = setTimeout(() => {
+        setRetryCount(1);
+        reset();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [retryCount, reset]);
 
   const handleGoHome = () => {
     window.location.href = '/library';
@@ -121,7 +131,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
           <div className='border-base-300 mt-8 border-t pt-6'>
             <p className='text-base-content/60 text-sm'>
               {_('Need help?')}{' '}
-              <a href='mailto:support@readest.com' className='link link-primary'>
+              <a href='mailto:support@oneread.app' className='link link-primary'>
                 {_('Contact Support')}
               </a>
             </p>

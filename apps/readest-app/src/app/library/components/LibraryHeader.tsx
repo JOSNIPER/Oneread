@@ -5,16 +5,20 @@ import { FaSearch } from 'react-icons/fa';
 import { PiPlus } from 'react-icons/pi';
 import { PiSelectionAll, PiSelectionAllFill } from 'react-icons/pi';
 import { PiDotsThreeCircle } from 'react-icons/pi';
-import { MdOutlineMenu } from 'react-icons/md';
+import { MdOutlineMenu, MdPushPin } from 'react-icons/md';
+import { PiSun, PiMoon } from 'react-icons/pi';
 import { IoMdCloseCircle } from 'react-icons/io';
 
 import { useEnv } from '@/context/EnvContext';
 import { useThemeStore } from '@/store/themeStore';
+import { useSettingsStore } from '@/store/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useLibraryStore } from '@/store/libraryStore';
 import { useTrafficLight } from '@/hooks/useTrafficLight';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
 import { debounce } from '@/utils/debounce';
+import { saveSysSettings } from '@/helpers/settings';
+import { tauriHandleSetAlwaysOnTop } from '@/utils/window';
 import useShortcuts from '@/hooks/useShortcuts';
 import WindowButtons from '@/components/WindowButtons';
 import Dropdown from '@/components/Dropdown';
@@ -25,7 +29,6 @@ import ViewMenu from './ViewMenu';
 interface LibraryHeaderProps {
   isSelectMode: boolean;
   isSelectAll: boolean;
-  onPullLibrary: () => void;
   onImportBooksFromFiles: () => void;
   onImportBooksFromDirectory?: () => void;
   onImportBookFromUrl?: () => void;
@@ -38,7 +41,6 @@ interface LibraryHeaderProps {
 const LibraryHeader: React.FC<LibraryHeaderProps> = ({
   isSelectMode,
   isSelectAll,
-  onPullLibrary,
   onImportBooksFromFiles,
   onImportBooksFromDirectory,
   onImportBookFromUrl,
@@ -50,10 +52,12 @@ const LibraryHeader: React.FC<LibraryHeaderProps> = ({
   const _ = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { appService } = useEnv();
-  const { systemUIVisible, statusBarHeight } = useThemeStore();
+  const { envConfig, appService } = useEnv();
+  const { themeMode, setThemeMode, systemUIVisible, statusBarHeight } = useThemeStore();
+  const { settings } = useSettingsStore();
   const { currentBookshelf } = useLibraryStore();
   const [searchQuery, setSearchQuery] = useState(searchParams?.get('q') ?? '');
+  const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(settings.alwaysOnTop);
 
   const headerRef = useRef<HTMLDivElement>(null);
   const { isTrafficLightVisible } = useTrafficLight(headerRef);
@@ -85,6 +89,17 @@ const LibraryHeader: React.FC<LibraryHeaderProps> = ({
   };
 
   const windowButtonVisible = appService?.hasWindowBar && !isTrafficLightVisible;
+
+  const cycleThemeMode = () => {
+    setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
+  };
+
+  const toggleAlwaysOnTop = () => {
+    const newValue = !isAlwaysOnTop;
+    saveSysSettings(envConfig, 'alwaysOnTop', newValue);
+    setIsAlwaysOnTop(newValue);
+    tauriHandleSetAlwaysOnTop(newValue);
+  };
   const currentBooksCount = currentBookshelf.reduce(
     (acc, item) => acc + ('books' in item ? item.books.length : 1),
     0,
@@ -208,13 +223,35 @@ const LibraryHeader: React.FC<LibraryHeaderProps> = ({
             >
               <ViewMenu />
             </Dropdown>
+            <button
+              type='button'
+              onClick={cycleThemeMode}
+              className='btn btn-ghost h-8 min-h-8 w-8 p-0'
+              aria-label={themeMode === 'dark' ? _('Light Mode') : _('Dark Mode')}
+            >
+              {themeMode === 'dark' ? <PiSun size={iconSize18} /> : <PiMoon size={iconSize18} />}
+            </button>
+            {appService?.hasWindow && (
+              <button
+                type='button'
+                onClick={toggleAlwaysOnTop}
+                className={clsx(
+                  'btn btn-ghost h-8 min-h-8 w-8 p-0',
+                  isAlwaysOnTop && 'text-primary',
+                )}
+                aria-label={isAlwaysOnTop ? _('Disable Always on Top') : _('Enable Always on Top')}
+                title={_('Always on Top')}
+              >
+                <MdPushPin size={iconSize18} />
+              </button>
+            )}
             <Dropdown
               label={_('Settings Menu')}
               className='exclude-title-bar-mousedown dropdown-bottom dropdown-end'
               buttonClassName='btn btn-ghost h-8 min-h-8 w-8 p-0'
               toggleButton={<MdOutlineMenu role='none' size={iconSize18} />}
             >
-              <SettingsMenu onPullLibrary={onPullLibrary} />
+              <SettingsMenu />
             </Dropdown>
             {appService?.hasWindowBar && (
               <WindowButtons

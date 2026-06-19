@@ -1,15 +1,12 @@
 import clsx from 'clsx';
 import React from 'react';
 import {
-  MdOutlineCloudDownload,
-  MdOutlineCloudUpload,
   MdOutlineDelete,
   MdOutlineEdit,
   MdSaveAlt,
   MdExpandMore,
   MdExpandLess,
 } from 'react-icons/md';
-import { FaGoodreads } from 'react-icons/fa';
 
 import { Book } from '@/types/book';
 import { BookMetadata } from '@/libs/document';
@@ -52,8 +49,8 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({
   onDelete,
   onDeleteCloudBackup,
   onDeleteLocalCopy,
-  onDownload,
-  onUpload,
+  onDownload: _onDownload,
+  onUpload: _onUpload,
   onExport,
 }) => {
   const _ = useTranslation();
@@ -103,9 +100,9 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({
             )}
             <button
               onClick={() => openExternalUrl(getGoodreadsSearchUrl(getBookGoodreadsQuery(book)))}
-              title={_('Search on Goodreads')}
+              title={_('Search on Bing')}
             >
-              <FaGoodreads className='fill-base-content' />
+              <span className='text-base-content text-sm font-bold'>B</span>
             </button>
             {onDelete && (
               <Dropdown
@@ -142,16 +139,6 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({
                   />
                 </div>
               </Dropdown>
-            )}
-            {book.uploadedAt && onDownload && (
-              <button onClick={onDownload} title={_('Download from Cloud')}>
-                <MdOutlineCloudDownload className='fill-base-content' />
-              </button>
-            )}
-            {book.downloadedAt && onUpload && (
-              <button onClick={onUpload} title={_('Upload to Cloud')}>
-                <MdOutlineCloudUpload className='fill-base-content' />
-              </button>
             )}
             {book.downloadedAt && onExport && (
               <button onClick={onExport} title={_('Export Book')}>

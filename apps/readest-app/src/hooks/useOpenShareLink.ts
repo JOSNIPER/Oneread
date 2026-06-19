@@ -5,7 +5,6 @@ import { useEnv } from '@/context/EnvContext';
 import { useLibraryStore } from '@/store/libraryStore';
 import { isTauriAppPlatform } from '@/services/environment';
 import { eventDispatcher } from '@/utils/event';
-import { useAuth } from '@/context/AuthContext';
 import { navigateToReader } from '@/utils/nav';
 import { ShareApiError, confirmDownload, importShare } from '@/libs/share';
 import { ensureSharedBookLocal } from '@/libs/shareImport';
@@ -44,20 +43,11 @@ export function useOpenShareLink() {
   const _ = useTranslation();
   const router = useRouter();
   const { appService } = useEnv();
-  const { user } = useAuth();
   const libraryLoaded = useLibraryStore((s) => s.libraryLoaded);
   const pending = useRef<ShareDeepLink | null>(null);
 
   const handleShareLink = useCallback(
     async ({ token }: ShareDeepLink) => {
-      if (!user) {
-        eventDispatcher.dispatch('toast', {
-          type: 'info',
-          message: _('Sign in to import shared books'),
-          timeout: 2500,
-        });
-        return;
-      }
       if (!appService) return;
       try {
         const result = await importShare(token);
@@ -92,7 +82,7 @@ export function useOpenShareLink() {
         });
       }
     },
-    [_, router, user, appService],
+    [_, router, appService],
   );
 
   useEffect(() => {

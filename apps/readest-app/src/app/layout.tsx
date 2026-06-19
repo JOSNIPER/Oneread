@@ -8,19 +8,18 @@ import Providers from '@/components/Providers';
 import '../styles/globals.css';
 
 const url = 'https://web.readest.com/';
-const title = 'Readest — Where You Read, Digest and Get Insight';
+const title = 'OneRead — 纯本地电子书阅读器';
 const description =
-  'Discover Readest, the ultimate online ebook reader for immersive and organized reading. ' +
-  'Enjoy seamless access to your digital library, powerful tools for highlighting, bookmarking, ' +
-  'and note-taking, and support for multiple book views. ' +
-  'Perfect for deep reading, analysis, and understanding. Explore now!';
+  'OneRead，纯本地电子书阅读器。' +
+  '所有数据存储在本地，不联网、不收集数据。' +
+  '支持 EPUB、PDF、TXT、Markdown、MOBI 格式。';
 const previewImage = 'https://cdn.readest.com/images/open_graph_preview_read_now.png';
 
 export const metadata: Metadata = {
   metadataBase: new URL(url),
   title: {
     default: title,
-    template: '%s | Readest',
+    template: '%s | OneRead',
   },
   description,
   generator: 'Next.js',
@@ -38,7 +37,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: 'Readest',
+    title: 'OneRead',
     statusBarStyle: 'default',
   },
   openGraph: {

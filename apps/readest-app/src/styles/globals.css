@@ -686,6 +686,111 @@ input[type='range'].slider-input {
   border-radius: 8px;
 }
 
+/* Settings sidebar navigation (Koodo-style layout) */
+.settings-sidebar {
+  scrollbar-width: thin;
+}
+
+/* Library sidebar navigation */
+.library-sidebar {
+  scrollbar-width: thin;
+}
+
+.library-sidebar button:focus-visible {
+  outline: 2px solid theme('colors.primary');
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+/* Favorite heart button on book covers */
+.favorite-button {
+  z-index: 5;
+  transition:
+    opacity 0.2s ease-in-out,
+    transform 0.15s ease-in-out;
+}
+
+.favorite-button:hover {
+  transform: scale(1.15);
+}
+
+.favorite-button:active {
+  transform: scale(0.95);
+}
+
+/* Always show favorite button when book is favorited */
+.library-grid-item .favorite-button,
+.library-list-item .favorite-button {
+  opacity: 0;
+}
+
+.library-grid-item:hover .favorite-button,
+.library-list-item:hover .favorite-button {
+  opacity: 1;
+}
+
+/* Keep favorite heart visible even when not hovering if book is favorited */
+.library-grid-item .favorite-button[style*='opacity: 1'],
+.library-list-item .favorite-button[style*='opacity: 1'] {
+  opacity: 1 !important;
+}
+
+/* Settings sidebar navigation (Koodo-style layout) */
+.settings-sidebar {
+  scrollbar-width: thin;
+}
+
+.settings-sidebar-item {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: calc(100% - 16px);
+}
+
+.settings-sidebar-item:focus-visible {
+  outline: 2px solid theme('colors.primary');
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+.settings-sidebar-item-active {
+  position: relative;
+}
+
+.settings-sidebar-item-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background-color: theme('colors.primary');
+  border-radius: 0 2px 2px 0;
+}
+
+/* Settings panel content area scrollbar */
+.settings-panel-content {
+  scrollbar-width: thin;
+}
+
+.settings-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.settings-panel-content::-webkit-scrollbar-thumb {
+  background-color: theme('colors.base-content/0.2');
+  border-radius: 3px;
+}
+
+.settings-panel-content::-webkit-scrollbar-thumb:hover {
+  background-color: theme('colors.base-content/0.35');
+}
+
 /* View Transitions for library navigation */
 ::view-transition-old(root),
 ::view-transition-new(root) {

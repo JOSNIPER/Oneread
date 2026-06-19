@@ -84,7 +84,7 @@ export const AboutWindow = () => {
     <Dialog
       id='about_window'
       isOpen={isOpen}
-      title={_('About Readest')}
+      title={_('About OneRead')}
       onClose={handleClose}
       boxClassName='sm:!w-[480px] sm:!max-w-screen-sm sm:h-auto'
     >
@@ -95,7 +95,7 @@ export const AboutWindow = () => {
               <Image src='/icon.png' alt='App Logo' className='h-20 w-20' width={64} height={64} />
             </div>
             <div className='flex select-text flex-col items-center'>
-              <h2 className='mb-2 text-2xl font-bold'>Readest</h2>
+              <h2 className='mb-2 text-2xl font-bold'>OneRead</h2>
               <p className='text-neutral-content text-center text-sm'>
                 {_('Version {{version}}', { version: getAppVersion() })} {`(${browserInfo})`}
               </p>
@@ -130,26 +130,25 @@ export const AboutWindow = () => {
             dir='ltr'
           >
             <p className='text-neutral-content text-sm'>
-              © {new Date().getFullYear()} Bilingify LLC. All rights reserved.
+              © {new Date().getFullYear()} OneRead. Based on Readest.
             </p>
 
             <p className='text-neutral-content text-xs'>
-              This software is licensed under the{' '}
+              本软件基于{' '}
+              <Link href='https://github.com/readest/readest' className='text-blue-500 underline'>
+                Readest
+              </Link>{' '}
+              开源项目 fork 并修改而来。原项目采用{' '}
               <Link
                 href='https://www.gnu.org/licenses/agpl-3.0.html'
                 className='text-blue-500 underline'
               >
-                GNU Affero General Public License v3.0
+                AGPL v3 协议
               </Link>
-              . You are free to use, modify, and distribute this software under the terms of the
-              AGPL v3 license. Please see the license for more details.
+              ，本项目遵循相同协议开源。
             </p>
             <p className='text-neutral-content text-xs'>
-              Source code is available at{' '}
-              <Link href='https://github.com/readest/readest' className='text-blue-500 underline'>
-                GitHub
-              </Link>
-              .
+              主要修改：移除登录和云端同步功能，改为纯本地阅读器，仅保留 WebDAV 同步。
             </p>
 
             <LegalLinks />

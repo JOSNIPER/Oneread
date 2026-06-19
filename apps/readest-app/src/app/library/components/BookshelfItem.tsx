@@ -33,7 +33,8 @@ export const generateBookshelfItems = (
   const groupsMap = new Map<string, BooksGroup>();
 
   for (const book of books) {
-    if (book.deletedAt) continue;
+    // Note: deletedAt filtering is handled by the caller (page.tsx).
+    // The trash view needs to display deleted books.
 
     const groupName = book.groupName || BOOK_UNGROUPED_NAME;
     if (
@@ -107,6 +108,7 @@ interface BookshelfItemProps {
   handleShowDetailsBook: (book: Book) => void;
   handleLibraryNavigation: (targetGroup: string) => void;
   handleUpdateReadingStatus: (book: Book, status: ReadingStatus | undefined) => void;
+  handleToggleFavorite: (book: Book) => void;
 }
 
 const BookshelfItem: React.FC<BookshelfItemProps> = ({
@@ -125,6 +127,7 @@ const BookshelfItem: React.FC<BookshelfItemProps> = ({
   handleShowDetailsBook,
   handleLibraryNavigation,
   handleUpdateReadingStatus,
+  handleToggleFavorite,
 }) => {
   const _ = useTranslation();
   const router = useAppRouter();
@@ -260,6 +263,12 @@ const BookshelfItem: React.FC<BookshelfItemProps> = ({
           handleUpdateReadingStatus(book, undefined);
         },
       },
+      toggleFavorite: {
+        text: book.favorite ? _('Remove from Favorites') : _('Add to Favorites'),
+        action: async () => {
+          handleToggleFavorite(book);
+        },
+      },
       showDetails: {
         text: _('Show Book Details'),
         action: async () => {
@@ -274,7 +283,7 @@ const BookshelfItem: React.FC<BookshelfItemProps> = ({
         },
       },
       searchGoodreads: {
-        text: _('Search on Goodreads'),
+        text: _('Search on Bing'),
         action: async () => {
           openExternalUrl(getGoodreadsSearchUrl(getBookGoodreadsQuery(book)));
         },
@@ -303,6 +312,12 @@ const BookshelfItem: React.FC<BookshelfItemProps> = ({
         text: _('Delete'),
         action: async () => {
           eventDispatcher.dispatch('delete-books', { ids: [book.hash] });
+        },
+      },
+      restoreBook: {
+        text: _('Restore Book'),
+        action: async () => {
+          eventDispatcher.dispatch('restore-books', { ids: [book.hash] });
         },
       },
     };
@@ -463,6 +478,7 @@ const BookshelfItem: React.FC<BookshelfItemProps> = ({
               handleBookUpload={handleBookUpload}
               handleBookDownload={handleBookDownload}
               showBookDetailsModal={showBookDetailsModal}
+              handleToggleFavorite={handleToggleFavorite}
             />
           ) : (
             <GroupItem

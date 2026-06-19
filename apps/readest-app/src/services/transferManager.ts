@@ -367,12 +367,7 @@ class TransferManager {
           this.processQueue();
         }, delay);
       } else {
-        if (errorMessage.includes('Not authenticated')) {
-          eventDispatcher.dispatch('toast', {
-            type: 'error',
-            message: _('Please log in to continue'),
-          });
-        } else if (errorMessage.includes('Insufficient storage quota')) {
+        if (errorMessage.includes('Insufficient storage quota')) {
           eventDispatcher.dispatch('toast', {
             type: 'error',
             message: _('Insufficient storage quota'),

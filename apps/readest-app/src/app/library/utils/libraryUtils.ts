@@ -590,12 +590,14 @@ export type BookContextMenuItemId =
   | 'markFinished'
   | 'markUnread'
   | 'clearStatus'
+  | 'toggleFavorite'
   | 'showDetails'
   | 'showInFinder'
   | 'searchGoodreads'
   | 'download'
   | 'upload'
   | 'share'
+  | 'restoreBook'
   | 'delete';
 
 /**
@@ -607,12 +609,18 @@ export type BookContextMenuItemId =
  * order and the menu appears to shuffle on every open (issue #4389).
  */
 export const getBookContextMenuItemIds = (book: Book): BookContextMenuItemId[] => {
+  // Deleted books (in trash) get a simplified menu
+  if (book.deletedAt) {
+    return ['restoreBook', 'showDetails', 'delete'];
+  }
+
   const ids: BookContextMenuItemId[] = ['select', 'group'];
   ids.push(book.readingStatus === 'finished' ? 'markUnread' : 'markFinished');
   // "Clear Status" is offered only when the book has an explicit status set.
   if (book.readingStatus === 'finished' || book.readingStatus === 'unread') {
     ids.push('clearStatus');
   }
+  ids.push('toggleFavorite');
   ids.push('showDetails', 'showInFinder', 'searchGoodreads');
   if (book.uploadedAt && !book.downloadedAt) ids.push('download');
   if (!book.uploadedAt && book.downloadedAt) ids.push('upload');

@@ -11,13 +11,7 @@ import { VscSymbolColor } from 'react-icons/vsc';
 import { PiDotsThreeVerticalBold, PiRobot, PiSpeakerHigh } from 'react-icons/pi';
 import { LiaHandPointerSolid } from 'react-icons/lia';
 import { IoAccessibilityOutline } from 'react-icons/io5';
-import {
-  MdArrowBackIosNew,
-  MdArrowForwardIos,
-  MdChevronLeft,
-  MdChevronRight,
-  MdClose,
-} from 'react-icons/md';
+import { MdArrowBackIosNew, MdArrowForwardIos, MdClose } from 'react-icons/md';
 import { FiSearch } from 'react-icons/fi';
 import { getDirFromUILanguage } from '@/utils/rtl';
 import { getCommandPaletteShortcut } from '@/services/environment';
@@ -33,6 +27,8 @@ import LangPanel from './LangPanel';
 import MiscPanel from './MiscPanel';
 import AIPanel from './AIPanel';
 import TTSPanel from './TTSPanel';
+import AdvancedPanel from './AdvancedPanel';
+import { LuDatabase } from 'react-icons/lu';
 
 export type SettingsPanelType =
   | 'Font'
@@ -43,7 +39,8 @@ export type SettingsPanelType =
   | 'Language'
   | 'AI'
   | 'Integrations'
-  | 'Custom';
+  | 'Custom'
+  | 'Advanced';
 export type SettingsPanelPanelProp = {
   bookKey: string;
   onRegisterReset: (resetFn: () => void) => void;
@@ -61,10 +58,7 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
   const { appService } = useEnv();
   const closeIconSize = useResponsiveSize(16);
   const [isRtl] = useState(() => getDirFromUILanguage() === 'rtl');
-  const tabsRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const [showAllTabLabels, setShowAllTabLabels] = useState(false);
-  const [canScrollTabsForward, setCanScrollTabsForward] = useState(false);
   const {
     setFontPanelView,
     setSettingsDialogOpen,
@@ -127,13 +121,14 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
       icon: IoAccessibilityOutline,
       label: _('Custom'),
     },
+    {
+      tab: 'Advanced',
+      icon: LuDatabase,
+      label: _('Advanced'),
+    },
   ] as TabConfig[];
 
   const [activePanel, setActivePanel] = useState<SettingsPanelType>(() => {
-    // Deep-link: if a caller asked for a specific panel before opening the
-    // dialog, honor that for the initial state. The store-clear lives in
-    // a useEffect below so we never call a zustand setter during render
-    // (would warn "Cannot update a component while rendering another").
     if (requestedPanel && tabConfig.some((tab) => tab.tab === requestedPanel)) {
       return requestedPanel as SettingsPanelType;
     }
@@ -144,10 +139,6 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
     return 'Font' as SettingsPanelType;
   });
 
-  // Clear the deep-link request after the initial render has consumed it,
-  // so the next dialog open doesn't stick on the same panel. Effect runs
-  // once on mount; subsequent callers must call setRequestedPanel before
-  // opening the dialog again.
   useEffect(() => {
     if (requestedPanel) setRequestedPanel(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -159,7 +150,6 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
     localStorage.setItem('lastConfigPanel', tab);
   };
 
-  // sync localStorage and fontPanelView when activePanel changes
   const activePanelRef = useRef(activePanel);
   useEffect(() => {
     if (activePanelRef.current !== activePanel) {
@@ -181,6 +171,7 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
     AI: null,
     Integrations: null,
     Custom: null,
+    Advanced: null,
   });
 
   const registerResetFunction = (panel: SettingsPanelType, resetFn: () => void) => {
@@ -202,7 +193,6 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
   useEffect(() => {
     if (!activeSettingsItemId) return;
 
-    // parse panel from item id (format: settings.panel.itemName)
     const parts = activeSettingsItemId.split('.');
     if (parts.length >= 2) {
       const panelMap: Record<string, SettingsPanelType> = {
@@ -224,7 +214,6 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
       }
     }
 
-    // scroll to item after panel renders
     const timeoutId = setTimeout(() => {
       const element = panelRef.current?.querySelector(
         `[data-setting-id="${activeSettingsItemId}"]`,
@@ -242,71 +231,10 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
 
   useEffect(() => {
     setFontPanelView('main-fonts');
-
-    const container = tabsRef.current;
-    if (!container) return;
-
-    const checkButtonWidths = () => {
-      const threshold = (container.clientWidth - 64) / tabConfig.filter((t) => !t.disabled).length;
-      const hideLabel = Array.from(container.querySelectorAll('button')).some((button) => {
-        const labelSpan = button.querySelector('span');
-        const labelText = labelSpan?.textContent || '';
-        const clone = button.cloneNode(true) as HTMLButtonElement;
-        clone.style.position = 'absolute';
-        clone.style.visibility = 'hidden';
-        clone.style.width = 'auto';
-        const cloneSpan = clone.querySelector('span');
-        if (cloneSpan) {
-          cloneSpan.classList.remove('hidden');
-          cloneSpan.textContent = labelText;
-        }
-        document.body.appendChild(clone);
-        const fullWidth = clone.scrollWidth;
-        document.body.removeChild(clone);
-        return fullWidth > threshold;
-      });
-      setShowAllTabLabels(!hideLabel);
-    };
-
-    // |scrollLeft| (Math.abs) handles RTL, where modern browsers use 0 → -max
-    // for scrolling toward the visual-leading end of the strip.
-    const updateScrollState = () => {
-      const overflow = container.scrollWidth - container.clientWidth;
-      const scrolled = Math.abs(container.scrollLeft);
-      setCanScrollTabsForward(overflow > 1 && scrolled < overflow - 1);
-    };
-
-    const recompute = () => {
-      checkButtonWidths();
-      updateScrollState();
-    };
-
-    recompute();
-
-    const resizeObserver = new ResizeObserver(recompute);
-    resizeObserver.observe(container);
-    const mutationObserver = new MutationObserver(recompute);
-    mutationObserver.observe(container, {
-      subtree: true,
-      characterData: true,
-    });
-    container.addEventListener('scroll', updateScrollState, { passive: true });
-
-    return () => {
-      resizeObserver.disconnect();
-      mutationObserver.disconnect();
-      container.removeEventListener('scroll', updateScrollState);
-    };
   }, [setFontPanelView]);
 
-  const handleScrollTabsForward = () => {
-    const container = tabsRef.current;
-    if (!container) return;
-    const amount = container.clientWidth * 0.7;
-    container.scrollBy({ left: isRtl ? -amount : amount, behavior: 'smooth' });
-  };
-
   const currentPanel = tabConfig.find((tab) => tab.tab === activePanel);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
 
   const windowControls = (
     <div className='flex h-full items-center justify-end gap-x-2'>
@@ -343,143 +271,217 @@ const SettingsDialog: React.FC<{ bookKey: string }> = ({ bookKey }) => {
     </div>
   );
 
+  // Mobile: render horizontal tab strip (original behavior)
+  const mobileHeader = isMobile ? (
+    <div className='flex w-full flex-col items-center'>
+      <div className='-mt-2 flex w-full items-center justify-center pb-2 sm:hidden'>
+        <button
+          tabIndex={-1}
+          aria-label={_('Close')}
+          onClick={handleClose}
+          className={
+            'btn btn-ghost btn-circle absolute left-3 flex h-8 min-h-8 w-8 hover:bg-transparent focus:outline-none'
+          }
+        >
+          {isRtl ? <MdArrowForwardIos /> : <MdArrowBackIosNew />}
+        </button>
+        <div className='tab-title flex text-base font-semibold'>{currentPanel?.label || ''}</div>
+        <div className='absolute right-3'>{windowControls}</div>
+      </div>
+      <div
+        role='group'
+        aria-label={_('Settings Panels')}
+        className='dialog-tabs ms-1 flex h-10 w-full items-center gap-1 overflow-x-auto sm:ms-0'
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {tabConfig
+          .filter((t) => !t.disabled)
+          .map(({ tab, icon: Icon, label }) => (
+            <button
+              key={tab}
+              data-tab={tab}
+              tabIndex={0}
+              title={label}
+              className={clsx(
+                'btn btn-ghost text-base-content btn-sm gap-1 px-2',
+                activePanel === tab ? 'btn-active' : '',
+              )}
+              onClick={() => handleSetActivePanel(tab)}
+            >
+              <Icon className='mr-0' />
+            </button>
+          ))}
+      </div>
+    </div>
+  ) : null;
+
+  // Desktop: simple header with title + controls
+  const desktopHeader = !isMobile ? (
+    <div className='flex w-full items-center justify-between'>
+      <div className='text-base-content text-sm font-medium ps-1'>{_('Settings')}</div>
+      <div className='hidden sm:flex'>{windowControls}</div>
+    </div>
+  ) : null;
+
   return (
     <Dialog
       isOpen={true}
       onClose={handleClose}
-      // Settings is the top-level modal: raise it above the full-screen RSVP
-      // speed-reader overlay (z-[10000]) so dictionary management opened from
-      // inside RSVP shows on top instead of behind it (#3235). !important beats
-      // the Dialog's hardcoded z-50.
       className='modal-open !z-[10050]'
       bgClassName={bookKey ? 'sm:!bg-black/20' : 'sm:!bg-black/50'}
       boxClassName={clsx(
-        'sm:min-w-[520px] overflow-hidden not-eink:bg-base-200',
+        'overflow-hidden not-eink:bg-base-200',
+        // Desktop: wider dialog to accommodate sidebar + content
+        'sm:min-w-[720px] sm:max-w-[900px] sm:w-2/3',
         appService?.isMobile && 'sm:max-w-[90%] sm:w-3/4',
       )}
       snapHeight={appService?.isMobile ? 0.7 : undefined}
-      // Settings panels can be tall (Layout / Color especially); native
-      // scrollbars vanish on Android/iOS webviews, so use OverlayScrollbars
-      // to keep a visible, theme-aware track on every platform.
       useOverlayScroll
-      header={
-        <div className='flex w-full flex-col items-center'>
-          <div className='-mt-2 flex w-full items-center justify-center pb-2 sm:hidden'>
-            <button
-              tabIndex={-1}
-              aria-label={_('Close')}
-              onClick={handleClose}
-              className={
-                'btn btn-ghost btn-circle absolute left-3 flex h-8 min-h-8 w-8 hover:bg-transparent focus:outline-none'
-              }
-            >
-              {isRtl ? <MdArrowForwardIos /> : <MdArrowBackIosNew />}
-            </button>
-            <div className='tab-title flex text-base font-semibold'>
+      header={mobileHeader || desktopHeader}
+      // On desktop, disable the default OverlayScroll for the outer dialog
+      // because the content panel handles its own scrolling
+      contentClassName={!isMobile ? 'overflow-hidden !px-0 !my-0' : undefined}
+    >
+      {isMobile ? (
+        // Mobile: just render the panel content (tabs are in header)
+        <div
+          ref={panelRef}
+          role='group'
+          aria-label={`${_(currentPanel?.label || '')} - ${_('Settings')}`}
+        >
+          {activePanel === 'Font' && (
+            <FontPanel
+              bookKey={bookKey}
+              onRegisterReset={(fn) => registerResetFunction('Font', fn)}
+            />
+          )}
+          {activePanel === 'Layout' && (
+            <LayoutPanel
+              bookKey={bookKey}
+              onRegisterReset={(fn) => registerResetFunction('Layout', fn)}
+            />
+          )}
+          {activePanel === 'Color' && (
+            <ColorPanel
+              bookKey={bookKey}
+              onRegisterReset={(fn) => registerResetFunction('Color', fn)}
+            />
+          )}
+          {activePanel === 'Control' && (
+            <ControlPanel
+              bookKey={bookKey}
+              onRegisterReset={(fn) => registerResetFunction('Control', fn)}
+            />
+          )}
+          {activePanel === 'TTS' && (
+            <TTSPanel
+              bookKey={bookKey}
+              onRegisterReset={(fn) => registerResetFunction('TTS', fn)}
+            />
+          )}
+          {activePanel === 'Language' && (
+            <LangPanel
+              bookKey={bookKey}
+              onRegisterReset={(fn) => registerResetFunction('Language', fn)}
+            />
+          )}
+          {activePanel === 'AI' && <AIPanel />}
+          {activePanel === 'Integrations' && <IntegrationsPanel />}
+          {activePanel === 'Custom' && (
+            <MiscPanel
+              bookKey={bookKey}
+              onRegisterReset={(fn) => registerResetFunction('Custom', fn)}
+            />
+          )}
+          {activePanel === 'Advanced' && <AdvancedPanel />}
+        </div>
+      ) : (
+        // Desktop: left sidebar + right content
+        <div className='flex h-full min-h-0'>
+          {/* Left sidebar navigation */}
+          <nav
+            className='settings-sidebar bg-base-100/50 flex w-[180px] min-w-[180px] flex-col border-r border-base-300 py-2'
+            aria-label={_('Settings Panels')}
+          >
+            {tabConfig
+              .filter((t) => !t.disabled)
+              .map(({ tab, icon: Icon, label }) => (
+                <button
+                  key={tab}
+                  data-tab={tab}
+                  tabIndex={0}
+                  className={clsx(
+                    'settings-sidebar-item mx-2 flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
+                    activePanel === tab
+                      ? 'settings-sidebar-item-active bg-base-300 text-base-content font-medium'
+                      : 'text-base-content/70 hover:bg-base-200 hover:text-base-content',
+                  )}
+                  onClick={() => handleSetActivePanel(tab)}
+                >
+                  <Icon className='shrink-0 text-base' />
+                  <span className='truncate'>{label}</span>
+                </button>
+              ))}
+          </nav>
+
+          {/* Right content area */}
+          <div
+            ref={panelRef}
+            role='group'
+            aria-label={`${_(currentPanel?.label || '')} - ${_('Settings')}`}
+            className='settings-panel-content flex-1 overflow-y-auto px-6 py-4'
+          >
+            <div className='mb-4 text-base font-semibold text-base-content'>
               {currentPanel?.label || ''}
             </div>
-            <div className='absolute right-3'>{windowControls}</div>
-          </div>
-          <div className='flex w-full flex-row items-center justify-between'>
-            <div
-              ref={tabsRef}
-              role='group'
-              aria-label={_('Settings Panels') + ' - ' + (currentPanel?.label || '')}
-              className={clsx(
-                'dialog-tabs ms-1 flex h-10 w-full items-center gap-1 overflow-x-auto sm:ms-0',
-              )}
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              {tabConfig
-                .filter((t) => !t.disabled)
-                .map(({ tab, icon: Icon, label }) => (
-                  <button
-                    key={tab}
-                    data-tab={tab}
-                    tabIndex={0}
-                    title={label}
-                    className={clsx(
-                      'btn btn-ghost text-base-content btn-sm gap-1 px-2 max-[350px]:px-1',
-                      activePanel === tab ? 'btn-active' : '',
-                    )}
-                    onClick={() => handleSetActivePanel(tab)}
-                  >
-                    <Icon className='mr-0' />
-                    <span
-                      className={clsx(
-                        window.innerWidth < 640 && 'hidden',
-                        !(showAllTabLabels || activePanel === tab) && 'hidden',
-                      )}
-                    >
-                      {label}
-                    </span>
-                  </button>
-                ))}
-            </div>
-            {canScrollTabsForward && (
-              <button
-                type='button'
-                onClick={handleScrollTabsForward}
-                aria-label={_('Scroll tabs')}
-                title={_('Scroll tabs')}
-                tabIndex={-1}
-                className='btn btn-ghost btn-circle flex h-8 min-h-8 w-8 shrink-0 items-center justify-center p-0'
-              >
-                {isRtl ? <MdChevronLeft /> : <MdChevronRight />}
-              </button>
+            {activePanel === 'Font' && (
+              <FontPanel
+                bookKey={bookKey}
+                onRegisterReset={(fn) => registerResetFunction('Font', fn)}
+              />
             )}
-            <div className='hidden sm:flex'>{windowControls}</div>
+            {activePanel === 'Layout' && (
+              <LayoutPanel
+                bookKey={bookKey}
+                onRegisterReset={(fn) => registerResetFunction('Layout', fn)}
+              />
+            )}
+            {activePanel === 'Color' && (
+              <ColorPanel
+                bookKey={bookKey}
+                onRegisterReset={(fn) => registerResetFunction('Color', fn)}
+              />
+            )}
+            {activePanel === 'Control' && (
+              <ControlPanel
+                bookKey={bookKey}
+                onRegisterReset={(fn) => registerResetFunction('Control', fn)}
+              />
+            )}
+            {activePanel === 'TTS' && (
+              <TTSPanel
+                bookKey={bookKey}
+                onRegisterReset={(fn) => registerResetFunction('TTS', fn)}
+              />
+            )}
+            {activePanel === 'Language' && (
+              <LangPanel
+                bookKey={bookKey}
+                onRegisterReset={(fn) => registerResetFunction('Language', fn)}
+              />
+            )}
+            {activePanel === 'AI' && <AIPanel />}
+            {activePanel === 'Integrations' && <IntegrationsPanel />}
+            {activePanel === 'Custom' && (
+              <MiscPanel
+                bookKey={bookKey}
+                onRegisterReset={(fn) => registerResetFunction('Custom', fn)}
+              />
+            )}
+            {activePanel === 'Advanced' && <AdvancedPanel />}
           </div>
         </div>
-      }
-    >
-      <div
-        ref={panelRef}
-        role='group'
-        aria-label={`${_(currentPanel?.label || '')} - ${_('Settings')}`}
-      >
-        {activePanel === 'Font' && (
-          <FontPanel
-            bookKey={bookKey}
-            onRegisterReset={(fn) => registerResetFunction('Font', fn)}
-          />
-        )}
-        {activePanel === 'Layout' && (
-          <LayoutPanel
-            bookKey={bookKey}
-            onRegisterReset={(fn) => registerResetFunction('Layout', fn)}
-          />
-        )}
-        {activePanel === 'Color' && (
-          <ColorPanel
-            bookKey={bookKey}
-            onRegisterReset={(fn) => registerResetFunction('Color', fn)}
-          />
-        )}
-        {activePanel === 'Control' && (
-          <ControlPanel
-            bookKey={bookKey}
-            onRegisterReset={(fn) => registerResetFunction('Control', fn)}
-          />
-        )}
-        {activePanel === 'TTS' && (
-          <TTSPanel bookKey={bookKey} onRegisterReset={(fn) => registerResetFunction('TTS', fn)} />
-        )}
-        {activePanel === 'Language' && (
-          <LangPanel
-            bookKey={bookKey}
-            onRegisterReset={(fn) => registerResetFunction('Language', fn)}
-          />
-        )}
-        {activePanel === 'AI' && <AIPanel />}
-        {activePanel === 'Integrations' && <IntegrationsPanel />}
-        {activePanel === 'Custom' && (
-          <MiscPanel
-            bookKey={bookKey}
-            onRegisterReset={(fn) => registerResetFunction('Custom', fn)}
-          />
-        )}
-      </div>
+      )}
     </Dialog>
   );
 };

@@ -107,7 +107,7 @@ export const DEFAULT_SYSTEM_SETTINGS: Partial<SystemSettings> = {
   openBookInNewWindow: true,
   alwaysShowStatusBar: false,
   alwaysInForeground: false,
-  autoCheckUpdates: true,
+  autoCheckUpdates: false,
   updateChannel: 'stable',
   screenWakeLock: false,
   screenBrightness: -1, // -1~100, -1 for system default
@@ -120,7 +120,7 @@ export const DEFAULT_SYSTEM_SETTINGS: Partial<SystemSettings> = {
   openLastBooks: false,
   lastOpenBooks: [],
   autoImportBooksOnOpen: false,
-  telemetryEnabled: true,
+  telemetryEnabled: false,
   discordRichPresenceEnabled: false,
   libraryViewMode: 'grid',
   librarySortBy: LibrarySortByType.Updated,

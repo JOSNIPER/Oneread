@@ -9,7 +9,7 @@ import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation';
 import { Book } from '@/types/book';
 import { AppService, DeleteAction } from '@/types/system';
 import { buildBookLookupIndex } from '@/services/bookService';
-import { navigateToLibrary, navigateToLogin, navigateToReader } from '@/utils/nav';
+import { navigateToLibrary, navigateToReader } from '@/utils/nav';
 import { getBookWithUpdatedMetadata, listFormater } from '@/utils/book';
 import { getImportErrorMessage } from '@/services/errors';
 import { ingestFile } from '@/services/ingestService';
@@ -25,7 +25,6 @@ import { impactFeedback } from '@tauri-apps/plugin-haptics';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 
 import { useEnv } from '@/context/EnvContext';
-import { useAuth } from '@/context/AuthContext';
 import { useThemeStore } from '@/store/themeStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useLibraryStore } from '@/store/libraryStore';
@@ -60,7 +59,6 @@ import {
 
 import { LibraryGroupByType } from '@/types/settings';
 import { BookMetadata } from '@/libs/document';
-import { AboutWindow } from '@/components/AboutWindow';
 import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
 import { BookDetailModal } from '@/components/metadata';
 import { UpdaterWindow } from '@/components/UpdaterWindow';
@@ -82,6 +80,7 @@ import Spinner from '@/components/Spinner';
 import LibraryHeader from './components/LibraryHeader';
 import Bookshelf from './components/Bookshelf';
 import LibraryEmptyState from './components/LibraryEmptyState';
+import LibrarySidebar, { LibraryViewType } from './components/LibrarySidebar';
 import GroupHeader from './components/GroupHeader';
 import FailedImportsDialog, { FailedImport } from './components/FailedImportsDialog';
 import ImportFromFolderDialog, {
@@ -95,7 +94,8 @@ import useShortcuts from '@/hooks/useShortcuts';
 import { useReplicaPull } from '@/hooks/useReplicaPull';
 import { useCustomFonts } from '@/hooks/useCustomFonts';
 import DropIndicator from '@/components/DropIndicator';
-import SettingsDialog from '@/components/settings/SettingsDialog';
+import InlineSettings from '@/components/settings/InlineSettings';
+import NotebookPanel from './components/NotebookPanel';
 import ModalPortal from '@/components/ModalPortal';
 import TransferQueuePanel from './components/TransferQueuePanel';
 
@@ -140,7 +140,6 @@ const LibraryPageWithSearchParams = () => {
 const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchParams | null }) => {
   const router = useAppRouter();
   const { envConfig, appService } = useEnv();
-  const { token, user } = useAuth();
   const {
     library: libraryBooks,
     isSyncing,
@@ -160,7 +159,6 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
   const { safeAreaInsets: insets, isRoundedWindow } = useThemeStore();
   const { clearBookData } = useBookDataStore();
   const { settings, setSettings, saveSettings } = useSettingsStore();
-  const { isSettingsDialogOpen, setSettingsDialogOpen } = useSettingsStore();
   const { isTransferQueueOpen } = useTransferStore();
 
   // Library page pulls user replicas (dictionaries, custom fonts,
@@ -188,6 +186,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [isSelectAll, setIsSelectAll] = useState(false);
   const [isSelectNone, setIsSelectNone] = useState(false);
+  const [libraryView, setLibraryView] = useState<LibraryViewType>('shelf');
   const [showDetailsBook, setShowDetailsBook] = useState<Book | null>(null);
   const [failedImportsModal, setFailedImportsModal] = useState<FailedImport[] | null>(null);
   // "Import from folder" dialog state. Held as a small object rather
@@ -255,19 +254,11 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
   usePullToRefresh(
     scrollRef,
     async () => {
-      if (!user) {
-        navigateToLogin(router);
-        return;
-      }
-      await pullLibrary(false, true);
+      await pullLibrary();
       checkOPDSSubscriptions(true);
     },
     async () => {
-      if (!user) {
-        navigateToLogin(router);
-        return;
-      }
-      await pullLibrary(true, true);
+      await pullLibrary();
       checkOPDSSubscriptions(true);
     },
   );
@@ -290,7 +281,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
       }
     },
     onOpenFontLayoutSettings: () => {
-      setSettingsDialogOpen(true);
+      setLibraryView('settings');
     },
     onOpenBooks: () => {
       handleImportBooksFromFiles();
@@ -460,9 +451,9 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
               file,
               books: libraryBooks,
               transient: temp,
-              forceUpload: !!appService.isMobile && !!user,
+              forceUpload: !!appService.isMobile && false,
             },
-            { appService, settings, isLoggedIn: !!user },
+            { appService, settings, isLoggedIn: false },
           );
           if (book) {
             bookIds.push(book.hash);
@@ -531,19 +522,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
     if (isInitiating.current) return;
     isInitiating.current = true;
 
-    const initLogin = async () => {
-      const appService = await envConfig.getAppService();
-      const settings = await appService.loadSettings();
-      if (token && user) {
-        if (!settings.keepLogin) {
-          settings.keepLogin = true;
-          setSettings(settings);
-          saveSettings(envConfig, settings);
-        }
-      } else if (settings.keepLogin) {
-        router.push('/auth');
-      }
-    };
+    // Login removed — local-only mode
 
     const hasCachedLibrary = libraryBooks.length > 0;
     const loadingTimeout = hasCachedLibrary ? null : setTimeout(() => setLoading(true), 500);
@@ -602,7 +581,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
       return false;
     };
 
-    initLogin();
+    // initLogin() removed — local-only mode
     initLibrary();
     return () => {
       setCheckOpenWithBooks(false);
@@ -736,7 +715,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
             groupId: resolvedGroupId,
             groupName: resolvedGroupName,
           },
-          { appService, settings: liveSettings, isLoggedIn: !!user, appBooksPrefix },
+          { appService, settings: liveSettings, isLoggedIn: false, appBooksPrefix },
         );
         if (!book) return null;
         successfulImports.push(book.title);
@@ -1331,6 +1310,32 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
     return <div className={clsx('full-height', !appService?.isLinuxApp && 'bg-base-200')} />;
   }
 
+  // Filter books based on current view
+  const filteredBooks = React.useMemo(() => {
+    switch (libraryView) {
+      case 'favorites':
+        return libraryBooks.filter((b) => !b.deletedAt && b.favorite);
+      case 'trash':
+        return libraryBooks.filter((b) => !!b.deletedAt);
+      case 'settings':
+      case 'notebook':
+        return [];
+      case 'shelf':
+      default:
+        return libraryBooks.filter((b) => !b.deletedAt);
+    }
+  }, [libraryBooks, libraryView]);
+
+  // Book counts for sidebar
+  const bookCounts = React.useMemo(
+    () => ({
+      shelf: libraryBooks.filter((b) => !b.deletedAt).length,
+      favorites: libraryBooks.filter((b) => !b.deletedAt && b.favorite).length,
+      trash: libraryBooks.filter((b) => !!b.deletedAt).length,
+    }),
+    [libraryBooks],
+  );
+
   const showBookshelf = libraryLoaded || libraryBooks.length > 0;
 
   return (
@@ -1352,7 +1357,6 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
         <LibraryHeader
           isSelectMode={isSelectMode}
           isSelectAll={isSelectAll}
-          onPullLibrary={pullLibrary}
           onImportBooksFromFiles={handleImportBooksFromFiles}
           onImportBooksFromDirectory={
             appService?.canReadExternalDir ? handleImportBooksFromDirectory : undefined
@@ -1419,45 +1423,82 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
           groupName={currentSeriesAuthorGroup.groupName}
         />
       )}
-      {showBookshelf &&
-        (libraryBooks.some((book) => !book.deletedAt) ? (
-          <div aria-label={_('Your Bookshelf')} className='flex min-h-0 flex-grow flex-col'>
-            <div
-              ref={containerRef}
-              className={clsx(
-                'scroll-container drop-zone flex min-h-0 flex-grow flex-col',
-                isDragging && 'drag-over',
-              )}
-              style={{
-                paddingRight: `${insets.right}px`,
-                paddingLeft: `${insets.left}px`,
-              }}
-            >
-              <DropIndicator />
-              <Bookshelf
-                libraryBooks={libraryBooks}
-                isSelectMode={isSelectMode}
-                isSelectAll={isSelectAll}
-                isSelectNone={isSelectNone}
-                onScrollerRef={handleScrollerRef}
-                handleImportBooks={handleImportBooksFromFiles}
-                handleBookUpload={handleBookUpload}
-                handleBookDownload={handleBookDownload}
-                handleBookDelete={handleBookDelete('both')}
-                handleSetSelectMode={handleSetSelectMode}
-                handleShowDetailsBook={handleShowDetailsBook}
-                handleLibraryNavigation={handleLibraryNavigation}
-                booksTransferProgress={booksTransferProgress}
-                handlePushLibrary={pushLibrary}
-              />
-            </div>
+      {showBookshelf && (
+        <div className='flex min-h-0 flex-grow'>
+          {/* Left sidebar */}
+          <LibrarySidebar
+            activeView={libraryView}
+            onViewChange={setLibraryView}
+            bookCount={bookCounts}
+          />
+
+          {/* Right content area */}
+          <div className='flex min-h-0 flex-grow flex-col'>
+            {libraryView === 'settings' ? (
+              <InlineSettings />
+            ) : libraryView === 'notebook' ? (
+              <NotebookPanel libraryBooks={libraryBooks.filter((b) => !b.deletedAt)} />
+            ) : filteredBooks.length > 0 ? (
+              <div
+                ref={containerRef}
+                className={clsx(
+                  'scroll-container drop-zone flex min-h-0 flex-grow flex-col',
+                  isDragging && 'drag-over',
+                )}
+                style={{
+                  paddingRight: `${insets.right}px`,
+                  paddingLeft: `${insets.left}px`,
+                }}
+              >
+                <DropIndicator />
+                <Bookshelf
+                  libraryBooks={filteredBooks}
+                  isSelectMode={isSelectMode}
+                  isSelectAll={isSelectAll}
+                  isSelectNone={isSelectNone}
+                  onScrollerRef={handleScrollerRef}
+                  handleImportBooks={handleImportBooksFromFiles}
+                  handleBookUpload={handleBookUpload}
+                  handleBookDownload={handleBookDownload}
+                  handleBookDelete={handleBookDelete('both')}
+                  handleSetSelectMode={handleSetSelectMode}
+                  handleShowDetailsBook={handleShowDetailsBook}
+                  handleLibraryNavigation={handleLibraryNavigation}
+                  booksTransferProgress={booksTransferProgress}
+                  handlePushLibrary={pushLibrary}
+                />
+              </div>
+            ) : (
+              <div className='hero drop-zone flex h-full items-center justify-center'>
+                <DropIndicator />
+                {libraryView === 'favorites' ? (
+                  <div className='flex flex-col items-center justify-center gap-4 py-20 text-center'>
+                    <div className='text-base-content/50 text-5xl'>⭐</div>
+                    <div className='text-base-content/70 text-lg font-medium'>
+                      {_('No Favorites Yet')}
+                    </div>
+                    <div className='text-base-content/50 text-sm'>
+                      {_('Right-click a book to add it to favorites')}
+                    </div>
+                  </div>
+                ) : libraryView === 'trash' ? (
+                  <div className='flex flex-col items-center justify-center gap-4 py-20 text-center'>
+                    <div className='text-base-content/50 text-5xl'>🗑️</div>
+                    <div className='text-base-content/70 text-lg font-medium'>
+                      {_('Trash is Empty')}
+                    </div>
+                    <div className='text-base-content/50 text-sm'>
+                      {_('Deleted books will appear here')}
+                    </div>
+                  </div>
+                ) : (
+                  <LibraryEmptyState onImport={handleImportBooksFromFiles} />
+                )}
+              </div>
+            )}
           </div>
-        ) : (
-          <div className='hero drop-zone h-screen items-center justify-center'>
-            <DropIndicator />
-            <LibraryEmptyState onImport={handleImportBooksFromFiles} />
-          </div>
-        ))}
+        </div>
+      )}
       {showDetailsBook && (
         <BookDetailModal
           isOpen={!!showDetailsBook}
@@ -1476,13 +1517,11 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
           <TransferQueuePanel />
         </ModalPortal>
       )}
-      <AboutWindow />
       <KeyboardShortcutsHelp />
       <UpdaterWindow />
       <MigrateDataWindow />
       <BackupWindow onPullLibrary={pullLibrary} />
       <CacheManagerWindow />
-      {isSettingsDialogOpen && <SettingsDialog bookKey={''} />}
       {showCatalogManager && <CatalogDialog onClose={handleDismissOPDSDialog} />}
       {failedImportsModal && (
         <FailedImportsDialog

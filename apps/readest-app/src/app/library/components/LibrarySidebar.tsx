@@ -8,6 +8,7 @@ import {
   LuSettings,
   LuPanelLeftClose,
   LuPanelLeftOpen,
+  LuX,
 } from 'react-icons/lu';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -17,9 +18,19 @@ interface LibrarySidebarProps {
   activeView: LibraryViewType;
   onViewChange: (view: LibraryViewType) => void;
   bookCount: { shelf: number; favorites: number; trash: number };
+  isMobile?: boolean;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-const LibrarySidebar: React.FC<LibrarySidebarProps> = ({ activeView, onViewChange, bookCount }) => {
+const LibrarySidebar: React.FC<LibrarySidebarProps> = ({
+  activeView,
+  onViewChange,
+  bookCount,
+  isMobile = false,
+  isOpen = true,
+  onClose,
+}) => {
   const _ = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -59,6 +70,83 @@ const LibrarySidebar: React.FC<LibrarySidebarProps> = ({ activeView, onViewChang
     },
   ];
 
+  const handleItemClick = (key: LibraryViewType) => {
+    onViewChange(key);
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };
+
+  // Mobile: overlay sidebar
+  if (isMobile) {
+    if (!isOpen) return null;
+
+    return (
+      <>
+        {/* Backdrop */}
+        <div className='fixed inset-0 z-40 bg-black/30' onClick={onClose} />
+        {/* Sidebar */}
+        <nav
+          className='library-sidebar bg-base-100 fixed left-0 top-0 z-50 flex h-full w-[260px] flex-col py-3 shadow-xl'
+          aria-label={_('Library Navigation')}
+        >
+          {/* Header */}
+          <div className='flex items-center justify-between px-4 pb-3'>
+            <span className='text-sm font-medium uppercase tracking-wider text-base-content/50'>
+              {_('Library')}
+            </span>
+            <button
+              className='hover:bg-base-200 text-base-content/50 hover:text-base-content rounded-md p-1 transition-colors'
+              onClick={onClose}
+            >
+              <LuX size={18} />
+            </button>
+          </div>
+
+          {/* Menu items */}
+          {menuItems.map(({ key, icon: Icon, label, count }) => (
+            <button
+              key={key}
+              className={clsx(
+                'mx-2 flex items-center gap-3 rounded-lg px-4 py-3 text-left text-sm transition-colors',
+                activeView === key
+                  ? 'bg-base-300 text-base-content font-medium'
+                  : 'text-base-content/70 active:bg-base-200',
+              )}
+              onClick={() => handleItemClick(key)}
+            >
+              <Icon className='shrink-0 text-base' />
+              <span className='flex-1 truncate'>{label}</span>
+              {count !== null && count > 0 && (
+                <span className='text-base-content/50 text-xs'>{count}</span>
+              )}
+            </button>
+          ))}
+
+          {/* Bottom section */}
+          <div className='flex-1' />
+          <hr className='border-base-300 mx-4 my-1' />
+          {bottomMenuItems.map(({ key, icon: Icon, label }) => (
+            <button
+              key={key}
+              className={clsx(
+                'mx-2 flex items-center gap-3 rounded-lg px-4 py-3 text-left text-sm transition-colors',
+                activeView === key
+                  ? 'bg-base-300 text-base-content font-medium'
+                  : 'text-base-content/70 active:bg-base-200',
+              )}
+              onClick={() => handleItemClick(key)}
+            >
+              <Icon className='shrink-0 text-base' />
+              <span className='flex-1 truncate'>{label}</span>
+            </button>
+          ))}
+        </nav>
+      </>
+    );
+  }
+
+  // Desktop: inline sidebar
   return (
     <nav
       className={clsx(

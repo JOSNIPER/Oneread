@@ -187,6 +187,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
   const [isSelectAll, setIsSelectAll] = useState(false);
   const [isSelectNone, setIsSelectNone] = useState(false);
   const [libraryView, setLibraryView] = useState<LibraryViewType>('shelf');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showDetailsBook, setShowDetailsBook] = useState<Book | null>(null);
   const [failedImportsModal, setFailedImportsModal] = useState<FailedImport[] | null>(null);
   // "Import from folder" dialog state. Held as a small object rather
@@ -1357,6 +1358,7 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
         <LibraryHeader
           isSelectMode={isSelectMode}
           isSelectAll={isSelectAll}
+          onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
           onImportBooksFromFiles={handleImportBooksFromFiles}
           onImportBooksFromDirectory={
             appService?.canReadExternalDir ? handleImportBooksFromDirectory : undefined
@@ -1430,6 +1432,9 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
             activeView={libraryView}
             onViewChange={setLibraryView}
             bookCount={bookCounts}
+            isMobile={!!appService?.isMobile}
+            isOpen={appService?.isMobile ? isMobileSidebarOpen : true}
+            onClose={() => setIsMobileSidebarOpen(false)}
           />
 
           {/* Right content area */}

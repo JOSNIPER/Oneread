@@ -36,6 +36,7 @@ interface LibraryHeaderProps {
   onToggleSelectMode: () => void;
   onSelectAll: () => void;
   onDeselectAll: () => void;
+  onToggleSidebar?: () => void;
 }
 
 const LibraryHeader: React.FC<LibraryHeaderProps> = ({
@@ -48,6 +49,7 @@ const LibraryHeader: React.FC<LibraryHeaderProps> = ({
   onToggleSelectMode,
   onSelectAll,
   onDeselectAll,
+  onToggleSidebar,
 }) => {
   const _ = useTranslation();
   const router = useRouter();
@@ -125,6 +127,16 @@ const LibraryHeader: React.FC<LibraryHeaderProps> = ({
     >
       <div className='flex w-full items-center justify-between space-x-6 sm:space-x-12'>
         <div className='exclude-title-bar-mousedown relative flex w-full items-center pl-4'>
+          {isMobile && onToggleSidebar && (
+            <button
+              type='button'
+              onClick={onToggleSidebar}
+              className='btn btn-ghost h-8 min-h-8 w-8 p-0 mr-2'
+              aria-label={_('Library Navigation')}
+            >
+              <MdOutlineMenu size={iconSize18} />
+            </button>
+          )}
           <div className='relative flex h-9 w-full items-center sm:h-7'>
             <span className='text-base-content/50 absolute ps-3'>
               <FaSearch className='h-4 w-4' />
